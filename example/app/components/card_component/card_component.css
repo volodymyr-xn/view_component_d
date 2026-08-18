@@ -1,0 +1,16 @@
+.card {
+  border: 1px solid #d8dee4;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.card__header {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

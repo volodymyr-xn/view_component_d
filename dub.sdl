@@ -1,0 +1,39 @@
+name "view_component_d"
+description "ViewComponent-style components for D: sidecar .html.erb templates compiled at CTFE."
+homepage "https://github.com/volodia/view_component_d"
+license "MIT"
+
+targetType "library"
+sourcePaths "source"
+importPaths "source"
+
+configuration "library" {
+	targetType "library"
+}
+
+configuration "diet" {
+	targetType "library"
+	versions "ViewComponentDiet"
+	dependency "diet-ng" version="~>1.8"
+}
+
+configuration "unittest" {
+	targetType "executable"
+	targetName "view-component-tests"
+	mainSourceFile "tests/main.d"
+	sourcePaths "source" "tests"
+	importPaths "source" "tests"
+	stringImportPaths "tests/templates"
+	excludedSourceFiles "tests/diet_test.d"
+}
+
+configuration "unittest-diet" {
+	targetType "executable"
+	targetName "view-component-tests-diet"
+	mainSourceFile "tests/main.d"
+	sourcePaths "source" "tests"
+	importPaths "source" "tests"
+	stringImportPaths "tests/templates"
+	versions "ViewComponentDiet"
+	dependency "diet-ng" version="~>1.8"
+}

@@ -1,0 +1,65 @@
+#!/bin/sh
+# Rebuilds on every change to a D source or sidecar template.
+#
+# Templates compile at CTFE, so editing one requires a rebuild. This is the
+# intended dev loop: leave it running in a second terminal.
+#
+#   bin/watch                 # watch . and run `dub build`
+#   bin/watch example         # watch a subdirectory
+#   VC_BUILD="dub test" bin/watch
+
+set -eu
+
+WATCH_DIR="${1:-.}"
+BUILD_COMMAND="${VC_BUILD:-dub build}"
+
+if [ ! -d "$WATCH_DIR" ]; then
+	echo "bin/watch: no such directory: $WATCH_DIR" >&2
+	exit 1
+fi
+
+run_build() {
+	printf '\n\033[1m==> %s\033[0m\n' "$BUILD_COMMAND"
+
+	if sh -c "$BUILD_COMMAND"; then
+		printf '\033[32m==> ok\033[0m\n'
+	else
+		printf '\033[31m==> failed\033[0m\n'
+	fi
+}
+
+source_fingerprint() {
+	find "$WATCH_DIR" \
+		-type d -name '.dub' -prune -o \
+		-type f \( -name '*.d' -o -name '*.erb' -o -name '*.dt' -o -name 'dub.sdl' \
+			-o -name 'dub.json' \) -print0 |
+		xargs -0 ls -l 2>/dev/null |
+		cksum
+}
+
+echo "bin/watch: watching $WATCH_DIR (Ctrl-C to stop)"
+run_build
+
+if command -v fswatch >/dev/null 2>&1; then
+	fswatch -o -r \
+		--exclude '.*' \
+		--include '\.d$' --include '\.erb$' --include '\.dt$' --include 'dub\.(sdl|json)$' \
+		"$WATCH_DIR" |
+		while read -r _; do
+			run_build
+		done
+	exit 0
+fi
+
+echo "bin/watch: fswatch not found, polling every second"
+PREVIOUS=$(source_fingerprint)
+
+while true; do
+	sleep 1
+	CURRENT=$(source_fingerprint)
+
+	if [ "$CURRENT" != "$PREVIOUS" ]; then
+		PREVIOUS=$CURRENT
+		run_build
+	fi
+done

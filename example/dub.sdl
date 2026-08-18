@@ -1,0 +1,12 @@
+name "view_component_example"
+description "Runnable example of view_component_d, showing both sidecar layouts."
+license "MIT"
+
+targetType "executable"
+targetName "view-component-example"
+
+dependency "view_component_d" path=".."
+
+sourcePaths "app"
+importPaths "app"
+stringImportPaths "app/components"

@@ -1,0 +1,2 @@
+span.badge(class=component.tone)
+	= component.label
