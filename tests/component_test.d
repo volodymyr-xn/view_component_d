@@ -3,13 +3,11 @@ module tests.component_test;
 import view_component;
 import view_component.testing;
 
-final class ButtonComponent : ViewComponent
-{
+final class ButtonComponent : ViewComponent {
     string label;
     string cssClass;
 
-    this(string label, string cssClass)
-    {
+    this(string label, string cssClass) {
         this.label = label;
         this.cssClass = cssClass;
     }
@@ -17,106 +15,90 @@ final class ButtonComponent : ViewComponent
     mixin Template;
 }
 
-final class ActionComponent : ViewComponent
-{
+final class ActionComponent : ViewComponent {
     string name;
 
-    this(string name)
-    {
+    this(string name) {
         this.name = name;
     }
 
-    mixin Template!("action_component.html.erb");
+    mixin Template;
 }
 
-final class CardComponent : ViewComponent
-{
+final class CardComponent : ViewComponent {
     mixin RendersOneContent!("heading");
     mixin RendersMany!("actions", ActionComponent);
 
     mixin Template;
 }
 
-final class ListComponent : ViewComponent
-{
+final class ListComponent : ViewComponent {
     string[] entries;
 
-    this(string[] entries)
-    {
+    this(string[] entries) {
         this.entries = entries;
     }
 
     mixin Template;
 }
 
-final class RawComponent : ViewComponent
-{
+final class RawComponent : ViewComponent {
     string markup;
 
-    this(string markup)
-    {
+    this(string markup) {
         this.markup = markup;
     }
 
     mixin Template;
 }
 
-final class HiddenComponent : ViewComponent
-{
+final class HiddenComponent : ViewComponent {
     bool visible;
 
-    this(bool visible)
-    {
+    this(bool visible) {
         this.visible = visible;
     }
 
-    protected override bool shouldRender()
-    {
+    bool shouldRender() {
         return visible;
     }
 
-    mixin Template!("button_component.html.erb");
+    mixin Template;
 
     string label = "hidden";
     string cssClass = "x";
 }
 
-unittest
-{
+unittest {
     assertRendersEqual(new ButtonComponent("Save", "btn btn--primary"),
         "<button class=\"btn btn--primary\">Save</button>\n");
 }
 
-unittest
-{
+unittest {
     immutable markup = new ButtonComponent("Click <me> & \"quote\"", "btn").render();
     assertIncludes(markup, "Click &lt;me&gt; &amp; &quot;quote&quot;");
     assertExcludes(markup, "<me>");
 }
 
-unittest
-{
+unittest {
     immutable markup = new ListComponent(["one", "two"]).render();
     assertIncludes(markup, "<li>one</li>");
     assertIncludes(markup, "<li>two</li>");
 }
 
-unittest
-{
+unittest {
     immutable markup = new RawComponent("<em>hi</em>").render();
     assertIncludes(markup, "<p>&lt;em&gt;hi&lt;/em&gt;</p>");
     assertIncludes(markup, "<p><em>hi</em></p>");
     assertIncludes(markup, "<p><%= literal %></p>");
 }
 
-unittest
-{
+unittest {
     assert(new HiddenComponent(false).render() == "");
     assert(new HiddenComponent(true).render().length != 0);
 }
 
-unittest
-{
+unittest {
     auto card = new CardComponent()
         .withHeading("Report")
         .withActions(new ActionComponent("edit"), new ActionComponent("delete"))
@@ -131,59 +113,50 @@ unittest
     assertHasElement(markup, "div", ["class": "card__body"]);
 }
 
-unittest
-{
+unittest {
     auto card = new CardComponent().withContent(raw("<b>bold</b>"));
     assertIncludes(card.render(), "<b>bold</b>");
 }
 
-unittest
-{
+unittest {
     auto card = new CardComponent().withContent((ref Sink sink) { sink.put("<i>lazy</i>"); });
     assertIncludes(card.render(), "<i>lazy</i>");
 }
 
-unittest
-{
+unittest {
     auto card = new CardComponent();
     immutable markup = card.render();
     assertExcludes(markup, "card__heading");
     assertExcludes(markup, "card__actions");
 }
 
-unittest
-{
+unittest {
     assert(toSnakeCase("ButtonComponent") == "button_component");
     assert(toSnakeCase("HTMLBlockComponent") == "html_block_component");
     assert(toSnakeCase("Card") == "card");
 }
 
-unittest
-{
-    static assert(templatePathFor!"button_component" == "button_component.html.erb");
+unittest {
+    static assert(templatePathFor!"button_component"
+        == "button_component/button_component.html.erb");
     static assert(templatePathFor!"card_component" == "card_component/card_component.html.erb");
 }
 
-unittest
-{
+unittest {
     static assert(!__traits(compiles, templatePathFor!"no_such_component"));
 }
 
-final class ButtonComponentPreview : ComponentPreview
-{
-    ViewComponent primary()
-    {
+final class ButtonComponentPreview : ComponentPreview {
+    ViewComponent primary() {
         return new ButtonComponent("Save", "btn btn--primary");
     }
 
-    ViewComponent danger()
-    {
+    ViewComponent danger() {
         return new ButtonComponent("Delete", "btn btn--danger");
     }
 }
 
-unittest
-{
+unittest {
     PreviewRegistry.clear();
     registerPreviews!(tests.component_test)();
 

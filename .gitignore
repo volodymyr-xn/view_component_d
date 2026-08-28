@@ -19,3 +19,7 @@ C_HTML/
 C_TEMP/
 C_RESEARCH/
 C_TODO/
+
+*.sqlite
+*.sqlite3
+*.db

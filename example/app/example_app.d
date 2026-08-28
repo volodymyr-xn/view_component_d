@@ -5,16 +5,15 @@ import std.stdio : writeln;
 import view_component;
 
 import components.asset_manifest : assetManifest;
-import components.button_component;
+import components.button_component.button_component;
 import components.card_component.card_component : CardComponent;
-import components.dashboard_component : DashboardComponent;
+import components.dashboard_component.dashboard_component : DashboardComponent;
 import components.sidebar_component.sidebar_component : SidebarComponent;
-import components.sidebar_component.sidebar_footer_component : SidebarFooterComponent;
-import components.sidebar_component.sidebar_link_component : SidebarLinkComponent;
-import components.sidebar_component.sidebar_section_component : SidebarSectionComponent;
+import components.sidebar_component.sidebar_footer_component.sidebar_footer_component : SidebarFooterComponent;
+import components.sidebar_component.sidebar_link_component.sidebar_link_component : SidebarLinkComponent;
+import components.sidebar_component.sidebar_section_component.sidebar_section_component : SidebarSectionComponent;
 
-private SidebarComponent buildSidebar(string currentPath)
-{
+private SidebarComponent buildSidebar(string currentPath) {
     auto workspace = new SidebarSectionComponent("Workspace")
         .withLinks(
             new SidebarLinkComponent("Overview", "/", "◱"),
@@ -39,8 +38,7 @@ private SidebarComponent buildSidebar(string currentPath)
         .withContent(raw("<a class=\"sidebar__help\" href=\"/help\">Help &amp; docs</a>"));
 }
 
-void main()
-{
+void main() {
     writeln("=== sidebar: /projects is the current page ===");
     writeln(buildSidebar("/projects").render());
 
@@ -72,7 +70,7 @@ void main()
     writeln(new DashboardComponent("September", []).render());
 
     writeln("=== previews ===");
-    registerPreviews!(components.button_component)();
+    registerPreviews!(components.button_component.button_component)();
 
     foreach (preview; PreviewRegistry.all())
         writeln(preview.group, "#", preview.name, ": ", preview.build().render());

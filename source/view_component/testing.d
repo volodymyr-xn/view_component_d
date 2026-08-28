@@ -5,15 +5,13 @@ import core.exception : AssertError;
 import view_component.base : ViewComponent;
 
 /// Renders a component to markup for assertions.
-string renderToString(ViewComponent component)
-{
+string renderToString(ViewComponent component) {
     return component.render();
 }
 
 /// Asserts the rendered markup contains `needle`.
 void assertIncludes(string haystack, string needle, string file = __FILE__,
-    size_t line = __LINE__)
-{
+    size_t line = __LINE__) {
     if (indexOfSubstring(haystack, needle) != size_t.max)
         return;
 
@@ -23,8 +21,7 @@ void assertIncludes(string haystack, string needle, string file = __FILE__,
 
 /// Asserts the rendered markup does not contain `needle`.
 void assertExcludes(string haystack, string needle, string file = __FILE__,
-    size_t line = __LINE__)
-{
+    size_t line = __LINE__) {
     if (indexOfSubstring(haystack, needle) == size_t.max)
         return;
 
@@ -34,8 +31,7 @@ void assertExcludes(string haystack, string needle, string file = __FILE__,
 
 /// Asserts the component renders exactly `expected`.
 void assertRendersEqual(ViewComponent component, string expected, string file = __FILE__,
-    size_t line = __LINE__)
-{
+    size_t line = __LINE__) {
     immutable actual = component.render();
 
     if (actual == expected)
@@ -49,8 +45,7 @@ void assertRendersEqual(ViewComponent component, string expected, string file = 
  * whitespace, so template indentation does not make tests brittle.
  */
 void assertRendersEqualNormalized(ViewComponent component, string expected,
-    string file = __FILE__, size_t line = __LINE__)
-{
+    string file = __FILE__, size_t line = __LINE__) {
     immutable actual = component.render();
 
     if (normalizeWhitespace(actual) == normalizeWhitespace(expected))
@@ -66,8 +61,7 @@ void assertRendersEqualNormalized(ViewComponent component, string expected,
  * class list is enough.
  */
 void assertHasElement(string haystack, string tagName, string[string] attributes,
-    string file = __FILE__, size_t line = __LINE__)
-{
+    string file = __FILE__, size_t line = __LINE__) {
     if (hasElement(haystack, tagName, attributes))
         return;
 
@@ -76,12 +70,10 @@ void assertHasElement(string haystack, string tagName, string[string] attributes
 }
 
 /// Whether `haystack` holds an opening `tagName` tag carrying every attribute.
-bool hasElement(string haystack, string tagName, string[string] attributes)
-{
+bool hasElement(string haystack, string tagName, string[string] attributes) {
     size_t cursor = 0;
 
-    while (cursor < haystack.length)
-    {
+    while (cursor < haystack.length) {
         immutable tagStart = indexOfSubstring(haystack[cursor .. $], "<" ~ tagName);
 
         if (tagStart == size_t.max)
@@ -90,8 +82,7 @@ bool hasElement(string haystack, string tagName, string[string] attributes)
         immutable absoluteStart = cursor + tagStart;
         immutable afterName = absoluteStart + 1 + tagName.length;
 
-        if (afterName >= haystack.length || !isTagNameBoundary(haystack[afterName]))
-        {
+        if (afterName >= haystack.length || !isTagNameBoundary(haystack[afterName])) {
             cursor = afterName;
             continue;
         }
@@ -112,10 +103,8 @@ bool hasElement(string haystack, string tagName, string[string] attributes)
     return false;
 }
 
-private bool containsAllAttributes(string attributeText, string[string] attributes)
-{
-    foreach (name, value; attributes)
-    {
+private bool containsAllAttributes(string attributeText, string[string] attributes) {
+    foreach (name, value; attributes) {
         immutable namePosition = indexOfSubstring(attributeText, name ~ "=");
 
         if (namePosition == size_t.max)
@@ -130,18 +119,15 @@ private bool containsAllAttributes(string attributeText, string[string] attribut
     return true;
 }
 
-private bool isTagNameBoundary(char character) pure nothrow @safe @nogc
-{
+private bool isTagNameBoundary(char character) pure nothrow @safe @nogc {
     return character == ' ' || character == '>' || character == '\t' || character == '\n'
         || character == '\r' || character == '/';
 }
 
-private string describe(string[string] attributes)
-{
+private string describe(string[string] attributes) {
     string described;
 
-    foreach (name, value; attributes)
-    {
+    foreach (name, value; attributes) {
         if (described.length != 0)
             described ~= ", ";
 
@@ -151,8 +137,7 @@ private string describe(string[string] attributes)
     return described.length == 0 ? "no attributes" : described;
 }
 
-private size_t indexOfSubstring(const(char)[] haystack, const(char)[] needle) pure nothrow @safe
-{
+private size_t indexOfSubstring(const(char)[] haystack, const(char)[] needle) pure nothrow @safe {
     if (needle.length == 0)
         return 0;
 
@@ -166,18 +151,15 @@ private size_t indexOfSubstring(const(char)[] haystack, const(char)[] needle) pu
     return size_t.max;
 }
 
-private string normalizeWhitespace(string text) pure nothrow @safe
-{
+private string normalizeWhitespace(string text) pure nothrow @safe {
     string normalized;
     bool inWhitespace = false;
 
-    foreach (character; text)
-    {
+    foreach (character; text) {
         immutable isSpace = character == ' ' || character == '\t' || character == '\n'
             || character == '\r';
 
-        if (isSpace)
-        {
+        if (isSpace) {
             inWhitespace = true;
             continue;
         }

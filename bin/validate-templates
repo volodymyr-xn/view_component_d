@@ -1,0 +1,104 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Validates the HTML structure of .html.erb sidecars using Herb, the HTML-aware
+# ERB parser (https://github.com/marcoroth/herb).
+#
+#   bin/validate-templates [dir ...]      # defaults to tests/templates
+#
+# Herb parses the code inside ERB tags as Ruby, but our tags hold D. So every
+# tag body is blanked out — length-preserving, to keep line and column numbers
+# honest — before parsing. Herb then validates purely the HTML skeleton around
+# opaque tags, which is exactly the class of error the compile-time D parser
+# cannot see: unclosed elements, stray closing tags, ERB spanning an attribute
+# boundary.
+#
+# Optional: exits 0 with a notice when the herb gem is absent, so the library
+# keeps building with no Ruby installed.
+
+begin
+  require "herb"
+rescue LoadError
+  warn "validate-templates: herb gem not found, skipping (gem install herb)"
+  exit 0
+end
+
+# Replaces an ERB tag body with padding of the same length, so the surrounding
+# HTML keeps its original offsets.
+def blank_body(kind, length)
+  return "" if length.zero?
+  return " " * length unless kind == :output
+
+  (length >= 3 ? "nil" : "0").ljust(length)
+end
+
+def neutralize(source)
+  output = source.dup
+  cursor = 0
+
+  while (tag_open = output.index("<%", cursor))
+    # `<%%` is an escaped literal `<%`, not a tag.
+    if output[tag_open + 2] == "%"
+      cursor = tag_open + 3
+      next
+    end
+
+    tag_close = output.index("%>", tag_open + 2)
+    break unless tag_close
+
+    body_start = tag_open + 2
+    body_start += 1 if output[body_start] == "-"
+
+    kind = :statement
+
+    if output[body_start] == "="
+      body_start += 1
+      body_start += 1 if output[body_start] == "="
+      kind = :output
+    elsif output[body_start] == "#"
+      body_start += 1
+      kind = :comment
+    end
+
+    body_end = tag_close
+    body_end -= 1 if body_end > body_start && output[body_end - 1] == "-"
+
+    length = body_end - body_start
+    output[body_start, length] = blank_body(kind, length) if length.positive?
+
+    cursor = tag_close + 2
+  end
+
+  output
+end
+
+directories = ARGV.empty? ? ["tests/templates"] : ARGV
+templates = directories.flat_map { |dir| Dir.glob(File.join(dir, "**", "*.html.erb")) }.sort
+
+if templates.empty?
+  warn "validate-templates: no .html.erb files under #{directories.join(', ')}"
+  exit 0
+end
+
+failures = 0
+
+templates.each do |path|
+  result = Herb.parse(neutralize(File.read(path)))
+
+  next if result.errors.empty?
+
+  result.errors.each do |error|
+    start = error.location.start
+    puts "#{path}:#{start.line}:#{start.column}"
+    puts "  #{error.class.name.split('::').last}: #{error.message}"
+    failures += 1
+  end
+end
+
+if failures.zero?
+  puts "validate-templates: #{templates.size} template(s) OK"
+  exit 0
+end
+
+warn "validate-templates: #{failures} error(s) in #{templates.size} template(s)"
+exit 1

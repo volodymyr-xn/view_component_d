@@ -1,28 +1,23 @@
-module components.sidebar_component.sidebar_footer_component;
+module components.sidebar_component.sidebar_footer_component.sidebar_footer_component;
 
 import view_component;
 
 /// Fills the sidebar's single-component `footer` slot.
-final class SidebarFooterComponent : ViewComponent
-{
+final class SidebarFooterComponent : ViewComponent {
     string userName;
     string role;
 
-    this(string userName, string role)
-    {
+    this(string userName, string role) {
         this.userName = userName;
         this.role = role;
     }
 
-    string initials()
-    {
+    string initials() {
         string letters;
         bool atWordStart = true;
 
-        foreach (character; userName)
-        {
-            if (character == ' ')
-            {
+        foreach (character; userName) {
+            if (character == ' ') {
                 atWordStart = true;
                 continue;
             }

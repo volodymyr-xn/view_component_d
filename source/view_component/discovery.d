@@ -5,14 +5,11 @@ module view_component.discovery;
  * template: `ButtonComponent` -> `button_component`, `HTMLBlockComponent` ->
  * `html_block_component`.
  */
-string toSnakeCase(string identifier) pure nothrow @safe
-{
+string toSnakeCase(string identifier) pure nothrow @safe {
     string snake;
 
-    foreach (index, character; identifier)
-    {
-        if (!isUpper(character))
-        {
+    foreach (index, character; identifier) {
+        if (!isUpper(character)) {
             snake ~= character;
             continue;
         }
@@ -30,37 +27,33 @@ string toSnakeCase(string identifier) pure nothrow @safe
     return snake;
 }
 
-private bool isUpper(char character) pure nothrow @safe @nogc
-{
+private bool isUpper(char character) pure nothrow @safe @nogc {
     return character >= 'A' && character <= 'Z';
 }
 
-private bool isLower(char character) pure nothrow @safe @nogc
-{
+private bool isLower(char character) pure nothrow @safe @nogc {
     return character >= 'a' && character <= 'z';
 }
 
 /**
  * Every path a sidecar template may live at, in resolution order.
  *
- * The first two cover the standalone layouts. The rest come from the module's
- * own package path, which mirrors the directory tree — that is what lets a
- * sub-component live inside its parent's sidecar directory:
+ * A component always lives in a directory named after itself — there is no
+ * layout where a template sits loose beside its class:
  *
- *   app/components/sidebar_component/sidebar_component.html.erb
- *   app/components/sidebar_component/sidebar_link_component.html.erb
+ *   app/components/button_component/button_component.html.erb
  *
- * `SidebarLinkComponent` is module `components.sidebar_component.
- * sidebar_link_component`, so `sidebar_component/` is tried as a directory.
+ * Sub-components nest the same way, each in its own directory inside its
+ * parent's, which the module's package path already mirrors:
+ *
+ *   app/components/sidebar_component/sidebar_link_component/sidebar_link_component.html.erb
  */
-string[] templateCandidates(string stem, string modulePath) pure nothrow @safe
-{
-    string[] candidates = [stem ~ ".html.erb", stem ~ "/" ~ stem ~ ".html.erb"];
+string[] templateCandidates(string stem, string modulePath) pure nothrow @safe {
+    string[] candidates = [stem ~ "/" ~ stem ~ ".html.erb"];
 
     foreach (directory; packageDirectories(modulePath))
         candidates ~= directory ~ "/" ~ stem ~ ".html.erb";
 
-    candidates ~= stem ~ ".dt";
     candidates ~= stem ~ "/" ~ stem ~ ".dt";
 
     foreach (directory; packageDirectories(modulePath))
@@ -70,13 +63,11 @@ string[] templateCandidates(string stem, string modulePath) pure nothrow @safe
 }
 
 /// Directory paths from a module's package path, most specific first.
-private string[] packageDirectories(string modulePath) pure nothrow @safe
-{
+private string[] packageDirectories(string modulePath) pure nothrow @safe {
     string[] segments;
     size_t segmentStart = 0;
 
-    foreach (index, character; modulePath)
-    {
+    foreach (index, character; modulePath) {
         if (character != '.')
             continue;
 
@@ -86,8 +77,7 @@ private string[] packageDirectories(string modulePath) pure nothrow @safe
 
     string[] directories;
 
-    foreach (from; 0 .. segments.length)
-    {
+    foreach (from; 0 .. segments.length) {
         string joined;
 
         foreach (segment; segments[from .. $])
@@ -106,12 +96,10 @@ private string[] packageDirectories(string modulePath) pure nothrow @safe
  * Existence is probed with `__traits(compiles, import(...))`, so an unresolved
  * template fails at compile time naming every candidate it looked for.
  */
-template templatePathFor(string stem, string modulePath = null)
-{
+template templatePathFor(string stem, string modulePath = null) {
     enum candidatePaths = templateCandidates(stem, modulePath);
 
-    template firstResolvable(size_t index)
-    {
+    template firstResolvable(size_t index) {
         static if (index >= candidatePaths.length)
             enum firstResolvable = null;
         else static if (__traits(compiles, import(candidatePaths[index])))
@@ -126,9 +114,10 @@ template templatePathFor(string stem, string modulePath = null)
         static assert(false, missingTemplateMessage(stem, candidatePaths));
 }
 
-private string missingTemplateMessage(string stem, string[] candidatePaths) pure nothrow @safe
-{
+private string missingTemplateMessage(string stem, string[] candidatePaths) pure nothrow @safe {
     string message = "view_component: no sidecar template found for `" ~ stem ~ "`.\n"
+        ~ "  Every component lives in a directory named after itself; a template\n"
+        ~ "  loose beside its class is not a supported layout.\n"
         ~ "  Looked for, relative to every string import path:\n";
 
     foreach (candidate; candidatePaths)
@@ -140,7 +129,6 @@ private string missingTemplateMessage(string stem, string[] candidatePaths) pure
 }
 
 /// Whether `path` should be compiled by the Diet backend rather than the ERB one.
-bool isDietPath(string path) pure nothrow @safe @nogc
-{
+bool isDietPath(string path) pure nothrow @safe @nogc {
     return path.length >= 3 && path[$ - 3 .. $] == ".dt";
 }

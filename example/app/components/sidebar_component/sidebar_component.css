@@ -152,3 +152,34 @@
   font-size: 0.875rem;
   color: #57606a;
 }
+
+.sidebar__status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f2f4f7;
+  font-size: 0.875rem;
+  color: #57606a;
+}
+
+.sidebar__status-path {
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar__status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar__status-chip {
+  padding: 1px 7px;
+  border: 1px solid #d8dee4;
+  border-radius: 999px;
+  background: #fff;
+}

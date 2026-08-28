@@ -2,8 +2,9 @@ module components.sidebar_component.sidebar_component;
 
 import view_component;
 
-import components.sidebar_component.sidebar_footer_component : SidebarFooterComponent;
-import components.sidebar_component.sidebar_section_component : SidebarSectionComponent;
+import components.sidebar_component.sidebar_footer_component.sidebar_footer_component : SidebarFooterComponent;
+import components.sidebar_component.sidebar_status_component.sidebar_status_component : SidebarStatusComponent;
+import components.sidebar_component.sidebar_section_component.sidebar_section_component : SidebarSectionComponent;
 
 /**
  * Root of the sidebar tree, and the example that exercises every slot kind at
@@ -15,8 +16,7 @@ import components.sidebar_component.sidebar_section_component : SidebarSectionCo
  *   footer   RendersOne          component, one
  *   content  the base content block
  */
-final class SidebarComponent : ViewComponent
-{
+final class SidebarComponent : ViewComponent {
     string currentPath;
 
     mixin RendersOneContent!("brand");
@@ -24,19 +24,37 @@ final class SidebarComponent : ViewComponent
     mixin RendersMany!("sections", SidebarSectionComponent);
     mixin RendersOne!("footer", SidebarFooterComponent);
 
-    this(string currentPath)
-    {
+    this(string currentPath) {
         this.currentPath = currentPath;
     }
 
-    protected override void beforeRender()
-    {
+    void beforeRender() {
         foreach (section; sections)
             section.currentPath = currentPath;
     }
 
-    bool hasNavigation()
-    {
+    /// Counted here so the template can build the status component inline.
+    int totalLinkCount() {
+        int total = 0;
+
+        foreach (section; sections)
+            total += cast(int) section.links.length;
+
+        return total;
+    }
+
+    /// Only sections that will actually render, matching what the reader sees.
+    int sectionCount() {
+        int total = 0;
+
+        foreach (section; sections)
+            if (section.links.length != 0)
+                total++;
+
+        return total;
+    }
+
+    bool hasNavigation() {
         foreach (section; sections)
             if (section.links.length != 0)
                 return true;

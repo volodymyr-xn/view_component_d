@@ -10,3 +10,5 @@ dependency "view_component_d" path=".."
 sourcePaths "app"
 importPaths "app"
 stringImportPaths "app/components"
+
+preBuildCommands "if command -v ruby >/dev/null 2>&1; then ../bin/validate-templates app/components; fi"

@@ -1,0 +1,16 @@
+<div class="sidebar__status" data-role="status">
+  <span class="sidebar__status-summary"><%= summary %></span>
+  <% if (hasHint) { %>
+  <span class="sidebar__status-hint"><%= hint %></span>
+  <% } %>
+  <% if (hasChips) { %>
+  <ul class="sidebar__status-chips">
+    <% foreach (chip; chips) { %>
+    <li class="sidebar__status-chip"><%= chip %></li>
+    <% } %>
+  </ul>
+  <% } %>
+  <% if (hasPath) { %>
+  <span class="sidebar__status-path"><%= currentPath %></span>
+  <% } %>
+</div>

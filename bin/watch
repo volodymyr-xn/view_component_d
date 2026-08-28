@@ -10,6 +10,7 @@
 
 set -eu
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 WATCH_DIR="${1:-.}"
 BUILD_COMMAND="${VC_BUILD:-dub build}"
 
@@ -19,6 +20,15 @@ if [ ! -d "$WATCH_DIR" ]; then
 fi
 
 run_build() {
+	# Template validation first: an unclosed tag is invisible to the compiler,
+	# so catching it here is the whole point of having it in the dev loop.
+	if [ -x "$SCRIPT_DIR/validate-templates" ] && command -v ruby >/dev/null 2>&1; then
+		if ! "$SCRIPT_DIR/validate-templates" "$WATCH_DIR"; then
+			printf '\033[31m==> template validation failed\033[0m\n'
+			return
+		fi
+	fi
+
 	printf '\n\033[1m==> %s\033[0m\n' "$BUILD_COMMAND"
 
 	if sh -c "$BUILD_COMMAND"; then

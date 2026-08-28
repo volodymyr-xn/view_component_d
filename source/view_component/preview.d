@@ -15,35 +15,29 @@ import view_component.base : ViewComponent;
  *       ViewComponent danger() { return new ButtonComponent("Delete", "danger"); }
  *   }
  */
-abstract class ComponentPreview
-{
+abstract class ComponentPreview {
 }
 
 /// One registered preview: a named factory under a preview class.
-struct PreviewEntry
-{
+struct PreviewEntry {
     string group;
     string name;
     ViewComponent delegate() build;
 }
 
 /// Process-wide registry of previews discovered at compile time.
-final class PreviewRegistry
-{
+final class PreviewRegistry {
     private static PreviewEntry[] entries;
 
-    static void add(PreviewEntry entry)
-    {
+    static void add(PreviewEntry entry) {
         entries ~= entry;
     }
 
-    static const(PreviewEntry)[] all()
-    {
+    static const(PreviewEntry)[] all() {
         return entries;
     }
 
-    static const(PreviewEntry)[] inGroup(string group)
-    {
+    static const(PreviewEntry)[] inGroup(string group) {
         const(PreviewEntry)[] matches;
 
         foreach (ref entry; entries)
@@ -54,8 +48,7 @@ final class PreviewRegistry
     }
 
     /// Renders one preview by group and name; throws if it is not registered.
-    static string render(string group, string name)
-    {
+    static string render(string group, string name) {
         foreach (ref entry; entries)
             if (entry.group == group && entry.name == name)
                 return entry.build().render();
@@ -63,8 +56,7 @@ final class PreviewRegistry
         throw new Exception("view_component: no preview `" ~ group ~ "#" ~ name ~ "` registered");
     }
 
-    static void clear()
-    {
+    static void clear() {
         entries = null;
     }
 }
@@ -75,18 +67,15 @@ final class PreviewRegistry
  *
  *   registerPreviews!(app.components.button_component_preview)();
  */
-void registerPreviews(Modules...)()
-{
+void registerPreviews(Modules...)() {
     static foreach (Module; Modules)
         static foreach (memberName; __traits(allMembers, Module))
         {{
-            static if (__traits(compiles, __traits(getMember, Module, memberName)))
-            {
+            static if (__traits(compiles, __traits(getMember, Module, memberName))) {
                 alias Member = __traits(getMember, Module, memberName);
 
                 static if (is(Member == class) && is(Member : ComponentPreview)
-                    && !is(Member == ComponentPreview))
-                {
+                    && !is(Member == ComponentPreview)) {
                     registerPreviewClass!Member();
                 }
             }
@@ -95,20 +84,17 @@ void registerPreviews(Modules...)()
 
 /// Registers every preview method on a single preview class.
 void registerPreviewClass(PreviewType)()
-if (is(PreviewType : ComponentPreview))
-{
+if (is(PreviewType : ComponentPreview)) {
     auto instance = new PreviewType();
 
     static foreach (methodName; __traits(allMembers, PreviewType))
     {{
-        static if (__traits(compiles, __traits(getMember, instance, methodName)()))
-        {
+        static if (__traits(compiles, __traits(getMember, instance, methodName)())) {
             alias Method = typeof(&__traits(getMember, instance, methodName));
 
             static if (Parameters!Method.length == 0
                 && is(ReturnType!Method : ViewComponent)
-                && !is(ReturnType!Method == void))
-            {
+                && !is(ReturnType!Method == void)) {
                 PreviewRegistry.add(PreviewEntry(PreviewType.stringof, methodName,
                     () => cast(ViewComponent) __traits(getMember, instance, methodName)()));
             }

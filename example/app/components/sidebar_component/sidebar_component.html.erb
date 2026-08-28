@@ -1,29 +1,36 @@
 <nav class="sidebar" aria-label="Primary" data-sidebar>
-  <%- if (hasBrand) { -%>
+  <% if (hasBrand) { %>
   <div class="sidebar__brand"><%= brand %></div>
-  <%- } -%>
+  <% } %>
 
-  <%- if (hasNotices) { -%>
+  <% if (hasNotices) { %>
   <ul class="sidebar__notices">
-    <%- foreach (notice; notices) { -%>
+    <% foreach (notice; notices) { %>
     <li class="sidebar__notice"><%= notice %></li>
-    <%- } -%>
+    <% } %>
   </ul>
-  <%- } -%>
+  <% } %>
 
-  <%- if (hasNavigation) { -%>
+  <% if (hasNavigation) { %>
   <div class="sidebar__sections">
     <% render(sections); %>
   </div>
-  <%- } else { -%>
+  <% } else { %>
   <p class="sidebar__empty">No navigation available.</p>
-  <%- } -%>
+  <% } %>
 
-  <%- if (hasContent) { -%>
+  <%# Constructed and rendered right here: no slot from the caller, but slots
+      of its own, filled inline because every `withX` returns the component. %>
+  <%= new SidebarStatusComponent(sectionCount, totalLinkCount, currentPath)
+        .withHint(raw("<em>live</em>"))
+        .withChips("nav")
+        .withChips("beta & new") %>
+
+  <% if (hasContent) { %>
   <div class="sidebar__extra"><%= content %></div>
-  <%- } -%>
+  <% } %>
 
-  <%- if (hasFooter) { -%>
+  <% if (hasFooter) { %>
   <% render(footer); %>
-  <%- } -%>
+  <% } %>
 </nav>

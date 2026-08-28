@@ -25,6 +25,7 @@ configuration "unittest" {
 	importPaths "source" "tests"
 	stringImportPaths "tests/templates"
 	excludedSourceFiles "tests/diet_test.d"
+	preBuildCommands "if command -v ruby >/dev/null 2>&1; then ./bin/validate-templates tests/templates; fi"
 }
 
 configuration "unittest-diet" {
@@ -36,4 +37,5 @@ configuration "unittest-diet" {
 	stringImportPaths "tests/templates"
 	versions "ViewComponentDiet"
 	dependency "diet-ng" version="~>1.8"
+	preBuildCommands "if command -v ruby >/dev/null 2>&1; then ./bin/validate-templates tests/templates; fi"
 }

@@ -10,8 +10,7 @@ module components.asset_manifest;
  * — so the whole manifest is built at compile time and costs nothing at run
  * time.
  */
-string[] assetManifest(Components...)()
-{
+string[] assetManifest(Components...)() {
     string[] assets;
 
     static foreach (Component; Components)
@@ -23,12 +22,10 @@ string[] assetManifest(Components...)()
 }
 
 /// Existing `.css` and `.js` files named after a single component's template.
-template colocatedAssets(Component)
-{
+template colocatedAssets(Component) {
     enum stem = withoutTemplateExtension(Component.templatePath);
 
-    template resolved(string[] extensions)
-    {
+    template resolved(string[] extensions) {
         static if (extensions.length == 0)
             enum resolved = cast(string[]) null;
         else static if (__traits(compiles, import(stem ~ extensions[0])))
@@ -40,8 +37,7 @@ template colocatedAssets(Component)
     enum colocatedAssets = resolved!([".css", ".js"]);
 }
 
-private string withoutTemplateExtension(string templatePath) pure nothrow @safe
-{
+private string withoutTemplateExtension(string templatePath) pure nothrow @safe {
     static immutable string[] extensions = [".html.erb", ".dt"];
 
     foreach (extension; extensions)
@@ -52,8 +48,7 @@ private string withoutTemplateExtension(string templatePath) pure nothrow @safe
     return templatePath;
 }
 
-private bool contains(string[] haystack, string needle) pure nothrow @safe
-{
+private bool contains(string[] haystack, string needle) pure nothrow @safe {
     foreach (entry; haystack)
         if (entry == needle)
             return true;

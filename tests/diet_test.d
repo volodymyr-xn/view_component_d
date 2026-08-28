@@ -5,13 +5,11 @@ version (ViewComponentDiet):
 import view_component;
 import view_component.testing;
 
-final class BadgeComponent : ViewComponent
-{
+final class BadgeComponent : ViewComponent {
     string label;
     string tone;
 
-    this(string label, string tone)
-    {
+    this(string label, string tone) {
         this.label = label;
         this.tone = tone;
     }
@@ -19,13 +17,11 @@ final class BadgeComponent : ViewComponent
     mixin Template;
 }
 
-unittest
-{
+unittest {
     static assert(templatePathFor!"badge_component" == "badge_component/badge_component.dt");
 }
 
-unittest
-{
+unittest {
     immutable markup = new BadgeComponent("New", "badge--info").render();
     assertIncludes(markup, "badge--info");
     assertIncludes(markup, "New");

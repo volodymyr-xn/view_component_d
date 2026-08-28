@@ -5,6 +5,7 @@ public import view_component.discovery : isDietPath, templateCandidates, templat
     toSnakeCase;
 public import view_component.erb : compileErb;
 public import view_component.escape : SafeString, escapeHtml, raw;
+public import view_component.hooks : guardHookNames, hookNames, isNearMiss;
 public import view_component.preview : ComponentPreview, PreviewEntry, PreviewRegistry,
     registerPreviewClass, registerPreviews;
 public import view_component.render : emit;

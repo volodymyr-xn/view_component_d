@@ -1,9 +1,9 @@
 <article class="card">
-  <%- if (hasHeading) { -%>
+  <% if (hasHeading) { %>
   <header class="card__header"><%= heading %></header>
-  <%- } -%>
+  <% } %>
   <div class="card__body"><%= content %></div>
-  <%- if (hasActions) { -%>
+  <% if (hasActions) { %>
   <footer class="card__actions"><% render(actions); %></footer>
-  <%- } -%>
+  <% } %>
 </article>

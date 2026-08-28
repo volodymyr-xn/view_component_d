@@ -62,47 +62,50 @@ template engine, deliberately — D cannot evaluate D at runtime, so a runtime
 backend could only ever support a crippled subset of the expressions the
 compile-time one accepts. Run `bin/watch` for the dev loop instead.
 
-## Sidecar layouts
+## Sidecar directories
 
-Both are found by convention from the class name, which is snake_cased
-(`ButtonComponent` → `button_component`, `HTMLBlockComponent` →
-`html_block_component`):
+**Every component lives in a directory named after itself.** There is no layout
+where a template sits loose beside its class — that is the one supported shape,
+and the resolver enforces it.
+
+The directory name comes from the class name, snake_cased (`ButtonComponent` →
+`button_component`, `HTMLBlockComponent` → `html_block_component`). Everything
+belonging to the component goes in it: the class, the template, and any
+colocated stylesheet or script.
 
 ```
 app/components/
-  button_component.d              # flat
-  button_component.html.erb
-  card_component/                 # sidecar directory
+  button_component/
+    button_component.d
+    button_component.html.erb
+  card_component/
     card_component.d
     card_component.html.erb
     card_component.css
-  sidebar_component/              # sidecar directory with sub-components
+  sidebar_component/
     sidebar_component.d
     sidebar_component.html.erb
     sidebar_component.css
     sidebar_component.js
-    sidebar_section_component.d
-    sidebar_section_component.html.erb
-    sidebar_link_component.d
-    sidebar_link_component.html.erb
+    sidebar_link_component/          # sub-component, same rule
+      sidebar_link_component.d
+      sidebar_link_component.html.erb
 ```
 
-A component that lives inside *another* component's sidecar directory is found
-through its own module path, which mirrors the directory tree.
-`SidebarLinkComponent` is module `components.sidebar_component.
-sidebar_link_component`, so `sidebar_component/` is tried as a directory.
-Sub-components therefore need no configuration and no explicit path.
+Sub-components nest the same way — each in its own directory inside its
+parent's, which keeps the rule identical at every depth. A component is found
+through its module path, which already mirrors the directory tree, so nesting
+needs no configuration.
 
 Resolution order, first match wins:
 
-1. `<stem>.html.erb`
-2. `<stem>/<stem>.html.erb`
-3. `<package path>/<stem>.html.erb`, from the module's packages, longest first
-4. the same three with `.dt`
+1. `<stem>/<stem>.html.erb`
+2. `<package path>/<stem>.html.erb`, from the module's packages, longest first
+3. the same two with `.dt`
 
-Override it entirely with `mixin Template!("some/other.html.erb");`. Every
-component exposes the path it resolved to as `Component.templatePath`, which is
-what the example's `assetManifest` uses to find colocated `.css` / `.js`.
+There is no explicit-path escape hatch: `mixin Template;` takes no argument.
+Every component exposes the path it resolved to as `Component.templatePath`,
+which is what the example's `assetManifest` uses to find colocated assets.
 
 ## Template syntax
 
@@ -113,7 +116,26 @@ what the example's `assetManifest` uses to find colocated `.css` / `.js`.
 | `<%== expr %>` | D expression, emitted **unescaped** |
 | `<%# text %>` | comment, discarded |
 | `<%%` | a literal `<%` |
-| `<%-` … `-%>` | trim the preceding indentation / the following newline |
+| `<%-` … `-%>` | explicitly trim the preceding indentation / the following newline |
+
+**A statement or comment tag alone on its line takes the whole line with it**,
+so control flow costs no blank lines in the output and `<%-` / `-%>` are only
+needed for a tag sharing its line with markup. Output tags (`<%= %>`) never
+auto-trim — their surrounding whitespace is real content.
+
+```erb
+<ul>
+  <% foreach (entry; entries) { %>
+    <li><%= entry %></li>
+  <% } %>
+</ul>
+```
+```html
+<ul>
+    <li>one</li>
+    <li>two</li>
+</ul>
+```
 
 Expressions are full D — anything in scope in a method of your component,
 including its private members. In scope on top of that:
@@ -150,13 +172,13 @@ whole tree costs one buffer, not one string per node.
 <% render(new CardComponent().withHeading("Revenue").withContent("18,240")); %>
 
 <%# conditionally, and in a loop %>
-<%- if (hasFooter) { -%>
+<% if (hasFooter) { %>
   <% render(footer); %>
-<%- } -%>
+<% } %>
 
-<%- foreach (section; sections) { -%>
+<% foreach (section; sections) { %>
   <% render(section); %>
-<%- } -%>
+<% } %>
 ```
 
 `render(x)` and `<%= x %>` are the same call. Pick `render(...)` when the child
@@ -172,6 +194,36 @@ module components.sidebar_component.sidebar_component;
 import view_component;
 import components.sidebar_component.sidebar_link_component : SidebarLinkComponent;
 ```
+
+### Inline child, or slot?
+
+A child does not have to come from a slot. When it is an implementation detail
+of its parent, construct it in the parent's template from the parent's own
+data — the caller never learns it exists:
+
+```erb
+<%= new SidebarStatusComponent(sectionCount, totalLinkCount, currentPath) %>
+```
+
+An inline child can have slots of its own, filled right there — every `withX`
+returns the component, and an output tag may span lines:
+
+```erb
+<%= new SidebarStatusComponent(sectionCount, totalLinkCount, currentPath)
+      .withHint(raw("<em>live</em>"))
+      .withChips("nav")
+      .withChips("beta & new") %>
+```
+
+Text handed to a slot is escaped, so pass `raw(...)` for markup and plain text
+otherwise — `"beta & new"` renders as `beta &amp; new`, and writing the entity
+yourself would escape it twice.
+
+Use a slot instead when the caller should be able to supply, replace or omit
+the child. The rule of thumb: a slot is part of the component's public API, an
+inline child is part of its implementation. `example/app/components/sidebar_component`
+shows both — the footer arrives through `RendersOne`, the status line is built
+inline.
 
 Children reached through a slot need no field at all — `mixin
 RendersMany!("links", SidebarLinkComponent);` gives the template `links`
@@ -215,8 +267,62 @@ plural name — no inflection is guessed — and is variadic:
 
 ## Rendering hooks
 
-Override `beforeRender()` to derive state, and `shouldRender()` to suppress the
-component entirely (the equivalent of ViewComponent's `render?`).
+Declare `beforeRender()` to derive state, and `shouldRender()` to suppress the
+component entirely (the equivalent of ViewComponent's `render?`). Neither needs
+`override` or `protected` — they are found by name on the concrete class when
+the template is compiled:
+
+```d
+void beforeRender()
+{
+    foreach (section; sections)
+        section.currentPath = currentPath;
+}
+
+bool shouldRender()
+{
+    return links.length != 0;
+}
+```
+
+Dropping `override` would normally mean a misspelled hook silently never runs,
+so the mixin rejects near misses: any member within one edit of a hook name, or
+differing only in case, is a compile error naming the hook it resembles. A hook
+with the wrong signature is rejected too. Hooks are dispatched from the
+generated `renderInto`, so a component that writes `renderInto` by hand instead
+of using `mixin Template` does not get them.
+
+## Validating templates
+
+The compile-time parser checks that ERB tags are well-formed and that the D
+inside them compiles. It does **not** understand HTML — it sees `<%` and `%>`
+as byte pairs, so an unclosed `<div>` or an ERB tag straddling an attribute
+boundary compiles happily and breaks in the browser.
+
+`bin/validate-templates` closes that gap using [Herb](https://github.com/marcoroth/herb),
+an HTML-aware ERB parser. Wire it into your own recipe:
+
+```sdl
+preBuildCommands "if command -v ruby >/dev/null 2>&1; then ./bin/validate-templates app/components; fi"
+```
+
+```
+$ bin/validate-templates app/components
+app/components/card_component/card_component.html.erb:4:2
+  MissingOpeningTagError: Found closing tag `</div>` at (4:2) without a matching
+  opening tag in the same scope.
+```
+
+It is **entirely optional**: the script exits 0 with a notice when the `herb`
+gem is absent, and the `command -v ruby` guard skips it when Ruby is not
+installed at all. The library itself keeps its zero-dependency, Ruby-free build.
+
+Herb parses ERB tag bodies as Ruby, and ours hold D — `<% if (x) { %>` is valid
+D but broken Ruby, and Ruby's `if` wants an `end` where we write `}`. The script
+therefore blanks every tag body first, preserving its length so line and column
+numbers stay accurate, and lets Herb validate only the HTML skeleton around
+opaque tags. Nothing about your D is inspected or constrained.
+
 
 ## Previews and tests
 
@@ -250,6 +356,32 @@ Diet templates reach the component through an alias named `component`
 (`#{component.label}`), because Diet resolves names against the aliases it is
 handed rather than against enclosing scope. Without the version flag, a `.dt`
 sidecar fails the build with instructions rather than a missing-module error.
+
+## Benchmark
+
+`../benchmark/` — shared with the other ports in the surrounding
+`view_component_implementations` checkout — renders a dashboard of **15
+component types nested five levels deep**: every slot kind, per-level
+conditionals, attribute-dense markup, at 2006, 10006 and 20006 components.
+Each runtime is measured twice: the view layer on its own, and inside a
+complete application with models, SQLite and an HTTP server. Every runtime
+must emit byte-identical markup before any timing is reported.
+
+```sh
+../benchmark/run
+```
+
+```
+2006 components, parity OK (398932 bytes everywhere)
+
+view_component_d (LDC, release)              0.665 ms   1503 renders/s    1.0x
+view_component_d (vibe.d + SQLite, HTTP)     4.261 ms    235 renders/s    6.4x
+view_component gem (standalone)              9.412 ms    106 renders/s   14.1x
+view_component gem (Rails + SQLite, HTTP)   10.505 ms     95 renders/s   15.8x
+```
+
+The full-application rows break each request into database, component
+construction and render time. See `../benchmark/README.md`.
 
 ## Development
 

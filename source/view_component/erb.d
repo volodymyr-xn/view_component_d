@@ -15,16 +15,18 @@ import view_component.escape : escapeDStringLiteral;
  *   `<%== expr %>`  expression, emitted verbatim
  *   `<%# text %>`   comment, discarded
  *   `<%%`           a literal `<%`
- *   `<%-` / `-%>`   trim preceding indentation / the following newline
+ *   `<%-` / `-%>`   explicitly trim indentation / the following newline
+ *
+ * A statement or comment tag alone on its line takes the whole line with it,
+ * so control flow costs no blank lines in the output. `<%-` and `-%>` are only
+ * needed for a tag that shares its line with markup.
  */
-string compileErb(string source, string templateName, string sinkIdent)
-{
+string compileErb(string source, string templateName, string sinkIdent) {
     string code;
     string literal;
     size_t cursor = 0;
 
-    void flushLiteral()
-    {
+    void flushLiteral() {
         if (literal.length == 0)
             return;
 
@@ -32,20 +34,17 @@ string compileErb(string source, string templateName, string sinkIdent)
         literal = null;
     }
 
-    while (cursor < source.length)
-    {
+    while (cursor < source.length) {
         immutable tagOpen = indexOfTagOpen(source, cursor);
 
-        if (tagOpen == size_t.max)
-        {
+        if (tagOpen == size_t.max) {
             literal ~= source[cursor .. $];
             break;
         }
 
         literal ~= source[cursor .. tagOpen];
 
-        if (tagOpen + 2 < source.length && source[tagOpen + 2] == '%')
-        {
+        if (tagOpen + 2 < source.length && source[tagOpen + 2] == '%') {
             literal ~= "<%";
             cursor = tagOpen + 3;
             continue;
@@ -54,27 +53,23 @@ string compileErb(string source, string templateName, string sinkIdent)
         size_t bodyStart = tagOpen + 2;
         bool trimLeft = false;
 
-        if (bodyStart < source.length && source[bodyStart] == '-')
-        {
+        if (bodyStart < source.length && source[bodyStart] == '-') {
             trimLeft = true;
             bodyStart++;
         }
 
         auto kind = TagKind.statement;
 
-        if (bodyStart < source.length && source[bodyStart] == '=')
-        {
+        if (bodyStart < source.length && source[bodyStart] == '=') {
             bodyStart++;
             kind = TagKind.escapedOutput;
 
-            if (bodyStart < source.length && source[bodyStart] == '=')
-            {
+            if (bodyStart < source.length && source[bodyStart] == '=') {
                 bodyStart++;
                 kind = TagKind.rawOutput;
             }
         }
-        else if (bodyStart < source.length && source[bodyStart] == '#')
-        {
+        else if (bodyStart < source.length && source[bodyStart] == '#') {
             bodyStart++;
             kind = TagKind.comment;
         }
@@ -88,21 +83,26 @@ string compileErb(string source, string templateName, string sinkIdent)
         size_t bodyEnd = tagClose;
         bool trimRight = false;
 
-        if (bodyEnd > bodyStart && source[bodyEnd - 1] == '-')
-        {
+        if (bodyEnd > bodyStart && source[bodyEnd - 1] == '-') {
             trimRight = true;
             bodyEnd--;
         }
 
-        if (trimLeft)
+        // A block tag alone on its line takes the whole line with it, so
+        // control flow costs no blank lines in the output and `<%-` / `-%>` are
+        // only needed to trim a tag sharing its line with markup.
+        immutable isBlockTag = kind == TagKind.statement || kind == TagKind.comment;
+        immutable standsAlone = isBlockTag && startsLine(literal)
+            && endsLine(source, tagClose + 2);
+
+        if (trimLeft || standsAlone)
             literal = stripTrailingInlineSpace(literal);
 
         flushLiteral();
 
         immutable tagBody = source[bodyStart .. bodyEnd];
 
-        final switch (kind)
-        {
+        final switch (kind) {
             case TagKind.statement:
                 if (hasNonSpace(tagBody))
                     code ~= tagBody ~ "\n";
@@ -124,8 +124,8 @@ string compileErb(string source, string templateName, string sinkIdent)
 
         cursor = tagClose + 2;
 
-        if (trimRight)
-            cursor = skipOneNewline(source, cursor);
+        if (trimRight || standsAlone)
+            cursor = skipToNextLine(source, cursor);
     }
 
     flushLiteral();
@@ -133,8 +133,7 @@ string compileErb(string source, string templateName, string sinkIdent)
     return code;
 }
 
-private enum TagKind
-{
+private enum TagKind {
     statement,
     escapedOutput,
     rawOutput,
@@ -142,15 +141,13 @@ private enum TagKind
 }
 
 private void requireExpression(string tagBody, string templateName, string source, size_t tagOpen,
-    string opener)
-{
+    string opener) {
     if (!hasNonSpace(tagBody))
         assert(false, templateName ~ ":" ~ lineNumberAt(source, tagOpen)
             ~ ": empty `" ~ opener ~ "` tag, expected an expression");
 }
 
-private size_t indexOfTagOpen(string source, size_t from) pure nothrow @safe
-{
+private size_t indexOfTagOpen(string source, size_t from) pure nothrow @safe {
     if (source.length < 2)
         return size_t.max;
 
@@ -161,8 +158,7 @@ private size_t indexOfTagOpen(string source, size_t from) pure nothrow @safe
     return size_t.max;
 }
 
-private size_t indexOfTagClose(string source, size_t from) pure nothrow @safe
-{
+private size_t indexOfTagClose(string source, size_t from) pure nothrow @safe {
     if (source.length < 2)
         return size_t.max;
 
@@ -173,8 +169,7 @@ private size_t indexOfTagClose(string source, size_t from) pure nothrow @safe
     return size_t.max;
 }
 
-private string stripTrailingInlineSpace(string literal) pure nothrow @safe
-{
+private string stripTrailingInlineSpace(string literal) pure nothrow @safe {
     size_t end = literal.length;
 
     while (end > 0 && (literal[end - 1] == ' ' || literal[end - 1] == '\t'))
@@ -183,8 +178,36 @@ private string stripTrailingInlineSpace(string literal) pure nothrow @safe
     return literal[0 .. end];
 }
 
-private size_t skipOneNewline(string source, size_t cursor) pure nothrow @safe
-{
+/// Whether only blank space separates the tag from the start of its line.
+private bool startsLine(string literal) pure nothrow @safe {
+    foreach_reverse (character; literal) {
+        if (character == '\n')
+            return true;
+
+        if (character != ' ' && character != '\t' && character != '\r')
+            return false;
+    }
+
+    return true;
+}
+
+/// Whether only blank space separates `from` from the end of its line.
+private bool endsLine(string source, size_t from) pure nothrow @safe {
+    foreach (index; from .. source.length) {
+        if (source[index] == '\n')
+            return true;
+
+        if (source[index] != ' ' && source[index] != '\t' && source[index] != '\r')
+            return false;
+    }
+
+    return true;
+}
+
+private size_t skipToNextLine(string source, size_t cursor) pure nothrow @safe {
+    while (cursor < source.length && (source[cursor] == ' ' || source[cursor] == '\t'))
+        cursor++;
+
     if (cursor < source.length && source[cursor] == '\r')
         cursor++;
 
@@ -194,8 +217,7 @@ private size_t skipOneNewline(string source, size_t cursor) pure nothrow @safe
     return cursor;
 }
 
-private bool hasNonSpace(string text) pure nothrow @safe
-{
+private bool hasNonSpace(string text) pure nothrow @safe {
     foreach (character; text)
         if (character != ' ' && character != '\t' && character != '\n' && character != '\r')
             return true;
@@ -203,8 +225,7 @@ private bool hasNonSpace(string text) pure nothrow @safe
     return false;
 }
 
-private string lineNumberAt(string source, size_t offset) pure @safe
-{
+private string lineNumberAt(string source, size_t offset) pure @safe {
     import std.conv : to;
 
     size_t line = 1;

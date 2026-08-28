@@ -14,8 +14,7 @@ import view_component.base : ViewComponent;
  * because parameter defaults *are* resolved in the declaration scope — the slot
  * mixins therefore need nothing imported on the consumer's side.
  */
-struct SlotSupport
-{
+struct SlotSupport {
     alias Content = view_component.base.Content;
     alias SafeString = view_component.escape.SafeString;
     alias Sink = view_component.base.Sink;
@@ -30,8 +29,7 @@ struct SlotSupport
  * `hasHeader` for the template.
  */
 mixin template RendersOne(string slotName, SlotType, string generatedCode = rendersOneCode(slotName))
-if (is(SlotType : ViewComponent))
-{
+if (is(SlotType : ViewComponent)) {
     mixin(generatedCode);
 }
 
@@ -45,8 +43,7 @@ if (is(SlotType : ViewComponent))
  */
 mixin template RendersMany(string slotName, SlotType,
     string generatedCode = rendersManyCode(slotName))
-if (is(SlotType : ViewComponent))
-{
+if (is(SlotType : ViewComponent)) {
     mixin(generatedCode);
 }
 
@@ -57,8 +54,7 @@ if (is(SlotType : ViewComponent))
  *   mixin RendersOneContent!("title");
  */
 mixin template RendersOneContent(string slotName, alias Support = SlotSupport,
-    string generatedCode = rendersOneContentCode(slotName))
-{
+    string generatedCode = rendersOneContentCode(slotName)) {
     mixin(generatedCode);
 }
 
@@ -68,13 +64,11 @@ mixin template RendersOneContent(string slotName, alias Support = SlotSupport,
  *   mixin RendersManyContent!("rows");
  */
 mixin template RendersManyContent(string slotName, alias Support = SlotSupport,
-    string generatedCode = rendersManyContentCode(slotName))
-{
+    string generatedCode = rendersManyContentCode(slotName)) {
     mixin(generatedCode);
 }
 
-private string rendersOneCode(string slotName) pure nothrow @safe
-{
+private string rendersOneCode(string slotName) pure nothrow @safe {
     immutable suffix = capitalizeSlotName(slotName);
     immutable field = slotName ~ "Slot_";
 
@@ -85,8 +79,7 @@ private string rendersOneCode(string slotName) pure nothrow @safe
         ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ " !is null; }";
 }
 
-private string rendersManyCode(string slotName) pure nothrow @safe
-{
+private string rendersManyCode(string slotName) pure nothrow @safe {
     immutable suffix = capitalizeSlotName(slotName);
     immutable field = slotName ~ "Slot_";
 
@@ -97,8 +90,7 @@ private string rendersManyCode(string slotName) pure nothrow @safe
         ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ ".length != 0; }";
 }
 
-private string rendersOneContentCode(string slotName) pure nothrow @safe
-{
+private string rendersOneContentCode(string slotName) pure nothrow @safe {
     immutable suffix = capitalizeSlotName(slotName);
     immutable field = slotName ~ "Slot_";
 
@@ -113,8 +105,7 @@ private string rendersOneContentCode(string slotName) pure nothrow @safe
         ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ ".isEmpty == false; }";
 }
 
-private string rendersManyContentCode(string slotName) pure nothrow @safe
-{
+private string rendersManyContentCode(string slotName) pure nothrow @safe {
     immutable suffix = capitalizeSlotName(slotName);
     immutable field = slotName ~ "Slot_";
 
@@ -130,8 +121,7 @@ private string rendersManyContentCode(string slotName) pure nothrow @safe
 }
 
 /// Builds the `withX` / `hasX` suffix from a slot name.
-string capitalizeSlotName(string slotName) pure nothrow @safe
-{
+string capitalizeSlotName(string slotName) pure nothrow @safe {
     if (slotName.length == 0)
         return slotName;
 

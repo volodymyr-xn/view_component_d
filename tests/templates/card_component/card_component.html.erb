@@ -1,10 +1,10 @@
 <div class="card">
-  <%- if (hasHeading) { -%>
+  <% if (hasHeading) { %>
   <h2 class="card__heading"><%= heading %></h2>
-  <%- } -%>
+  <% } %>
   <div class="card__body"><%= content %></div>
   <%# this comment never reaches the output %>
-  <%- if (hasActions) { -%>
+  <% if (hasActions) { %>
   <footer class="card__actions"><% render(actions); %></footer>
-  <%- } -%>
+  <% } %>
 </div>

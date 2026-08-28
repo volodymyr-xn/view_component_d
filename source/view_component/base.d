@@ -1,15 +1,17 @@
 module view_component.base;
 
-import std.array : Appender, appender;
+import std.exception : assumeUnique;
 
-import view_component.escape : SafeString, escapeHtml;
+static import view_component.sink;
+
+import view_component.escape : SafeString, escapeHtmlInto;
 
 /**
  * The output buffer every component renders into. Nesting, slots and content
  * blocks all append to the caller's sink, so a whole component tree costs one
- * appender rather than one string per node.
+ * buffer rather than one string per node.
  */
-alias Sink = Appender!string;
+alias Sink = view_component.sink.Sink;
 
 /**
  * Caller-supplied markup: the content block, and the payload of content slots.
@@ -17,10 +19,8 @@ alias Sink = Appender!string;
  * Text is escaped on write, markup is trusted, and a builder writes straight
  * into the sink without an intermediate string.
  */
-struct Content
-{
-    private enum Kind
-    {
+struct Content {
+    private enum Kind {
         empty,
         text,
         markup,
@@ -32,8 +32,7 @@ struct Content
     private void delegate(ref Sink) builder;
 
     /// Content built from plain text; escaped when written.
-    static Content ofText(string text) pure nothrow @safe
-    {
+    static Content ofText(string text) pure nothrow @safe {
         Content content;
         content.kind = Kind.text;
         content.payload = text;
@@ -42,8 +41,7 @@ struct Content
     }
 
     /// Content built from trusted markup; written verbatim.
-    static Content ofMarkup(SafeString markup) pure nothrow @safe
-    {
+    static Content ofMarkup(SafeString markup) pure nothrow @safe {
         Content content;
         content.kind = Kind.markup;
         content.payload = markup.value;
@@ -52,8 +50,7 @@ struct Content
     }
 
     /// Content built lazily by a delegate writing into the sink.
-    static Content ofBuilder(void delegate(ref Sink) builder) pure nothrow @safe
-    {
+    static Content ofBuilder(void delegate(ref Sink) builder) pure nothrow @safe {
         Content content;
         content.kind = Kind.builder;
         content.builder = builder;
@@ -61,19 +58,16 @@ struct Content
         return content;
     }
 
-    bool isEmpty() const pure nothrow @safe @nogc
-    {
+    bool isEmpty() const pure nothrow @safe @nogc {
         return kind == Kind.empty;
     }
 
-    void writeInto(ref Sink sink)
-    {
-        final switch (kind)
-        {
+    void writeInto(ref Sink sink) {
+        final switch (kind) {
             case Kind.empty:
                 return;
             case Kind.text:
-                sink.put(escapeHtml(payload));
+                escapeHtmlInto(sink, payload);
                 return;
             case Kind.markup:
                 sink.put(payload);
@@ -93,76 +87,53 @@ struct Content
  * as ordinary public fields — template expressions resolve against them by
  * lexical scope, because the compiled template body is mixed into this method.
  */
-abstract class ViewComponent
-{
+abstract class ViewComponent {
     private Content contentSlot;
 
     protected abstract void renderInto(ref Sink sink);
 
-    /// Hook invoked before every render; override to derive state.
-    protected void beforeRender()
-    {
-    }
-
-    /// Override to suppress rendering entirely, like ViewComponent's `render?`.
-    protected bool shouldRender()
-    {
-        return true;
-    }
-
-    /// Renders into an existing sink, running the render hooks.
-    final void renderInSink(ref Sink sink)
-    {
-        beforeRender();
-
-        if (!shouldRender())
-            return;
-
+    /// Renders into an existing sink.
+    final void renderInSink(ref Sink sink) {
         renderInto(sink);
     }
 
     /// Renders standalone and returns the markup.
-    final string render()
-    {
-        auto sink = appender!string;
+    final string render() {
+        Sink sink;
         renderInSink(sink);
 
-        return sink.data;
+        // The sink dies with this call, so nothing else can observe the buffer.
+        return assumeUnique(sink.data);
     }
 
     /// Sets the content block from plain text, escaped on render.
-    final Self withContent(this Self)(string text)
-    {
+    final Self withContent(this Self)(string text) {
         contentSlot = Content.ofText(text);
 
         return cast(Self) this;
     }
 
     /// Sets the content block from trusted markup.
-    final Self withContent(this Self)(SafeString markup)
-    {
+    final Self withContent(this Self)(SafeString markup) {
         contentSlot = Content.ofMarkup(markup);
 
         return cast(Self) this;
     }
 
     /// Sets the content block from a delegate writing into the sink.
-    final Self withContent(this Self)(void delegate(ref Sink) builder)
-    {
+    final Self withContent(this Self)(void delegate(ref Sink) builder) {
         contentSlot = Content.ofBuilder(builder);
 
         return cast(Self) this;
     }
 
     /// The caller-supplied content block, for use as `<%= content %>`.
-    protected final ref Content content() return
-    {
+    protected final ref Content content() return {
         return contentSlot;
     }
 
     /// Whether a content block was supplied.
-    protected final bool hasContent() const
-    {
+    protected final bool hasContent() const {
         return !contentSlot.isEmpty;
     }
 }
