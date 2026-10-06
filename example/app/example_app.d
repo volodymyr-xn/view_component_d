@@ -5,13 +5,13 @@ import std.stdio : writeln;
 import view_component;
 
 import components.asset_manifest : assetManifest;
-import components.button_component.button_component;
-import components.card_component.card_component : CardComponent;
-import components.dashboard_component.dashboard_component : DashboardComponent;
-import components.sidebar_component.sidebar_component : SidebarComponent;
-import components.sidebar_component.sidebar_footer_component.sidebar_footer_component : SidebarFooterComponent;
-import components.sidebar_component.sidebar_link_component.sidebar_link_component : SidebarLinkComponent;
-import components.sidebar_component.sidebar_section_component.sidebar_section_component : SidebarSectionComponent;
+import components.button_component.component;
+import components.card_component.component : CardComponent;
+import components.dashboard_component.component : DashboardComponent;
+import components.sidebar_component.component : SidebarComponent;
+import components.sidebar_component.sidebar_footer_component.component : SidebarFooterComponent;
+import components.sidebar_component.sidebar_link_component.component : SidebarLinkComponent;
+import components.sidebar_component.sidebar_section_component.component : SidebarSectionComponent;
 
 private SidebarComponent buildSidebar(string currentPath) {
     auto workspace = new SidebarSectionComponent("Workspace")
@@ -70,7 +70,7 @@ void main() {
     writeln(new DashboardComponent("September", []).render());
 
     writeln("=== previews ===");
-    registerPreviews!(components.button_component.button_component)();
+    registerPreviews!(components.button_component.component)();
 
     foreach (preview; PreviewRegistry.all())
         writeln(preview.group, "#", preview.name, ": ", preview.build().render());

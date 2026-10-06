@@ -1,4 +1,4 @@
-module components.sidebar_component.sidebar_footer_component.sidebar_footer_component;
+module components.sidebar_component.sidebar_footer_component.component;
 
 import view_component;
 

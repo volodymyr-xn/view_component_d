@@ -1,4 +1,4 @@
-module components.sidebar_component.sidebar_status_component.sidebar_status_component;
+module components.sidebar_component.sidebar_status_component.component;
 
 import std.conv : to;
 

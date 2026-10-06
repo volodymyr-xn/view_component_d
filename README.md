@@ -4,8 +4,8 @@ ViewComponent-style components for D. A component is a class plus a sidecar
 template in the same directory, compiled together at CTFE.
 
 ```d
-// app/components/button_component.d
-module components.button_component;
+// app/components/button_component/component.d
+module components.button_component.component;
 
 import view_component;
 
@@ -27,7 +27,7 @@ final class ButtonComponent : ViewComponent
 ```
 
 ```erb
-<%# app/components/button_component.html.erb %>
+<%# app/components/button_component/component.html.erb %>
 <a class="<%= cssClass %>" href="#"><%= label %></a>
 ```
 
@@ -46,7 +46,7 @@ stringImportPaths "app/components"
 
 **`stringImportPaths` is required.** Templates are read with D's `import("…")`
 string import, which only searches the paths given to `-J`. Without it every
-component fails to compile with a message naming the four paths it looked for.
+component fails to compile with a message naming every path it looked for.
 
 ## How it works
 
@@ -70,27 +70,41 @@ and the resolver enforces it.
 
 The directory name comes from the class name, snake_cased (`ButtonComponent` →
 `button_component`, `HTMLBlockComponent` → `html_block_component`). Everything
-belonging to the component goes in it: the class, the template, and any
-colocated stylesheet or script.
+belonging to the component goes in it, named `component.*`: the class, the
+template, and any colocated stylesheet or script.
 
 ```
 app/components/
   button_component/
-    button_component.d
-    button_component.html.erb
+    component.d                      # module components.button_component.component
+    component.html.erb
   card_component/
-    card_component.d
-    card_component.html.erb
-    card_component.css
+    component.d
+    component.html.erb
+    component.css
   sidebar_component/
-    sidebar_component.d
-    sidebar_component.html.erb
-    sidebar_component.css
-    sidebar_component.js
+    component.d
+    component.html.erb
+    component.css
+    component.js
     sidebar_link_component/          # sub-component, same rule
-      sidebar_link_component.d
-      sidebar_link_component.html.erb
+      component.d
+      component.html.erb
 ```
+
+Files named after the directory are supported too, and the two layouts can be
+mixed across components:
+
+```
+app/components/
+  button_component/
+    button_component.d               # module components.button_component.button_component
+    button_component.html.erb
+```
+
+Within one component, name every file the same way: colocated assets are found
+by the template's basename, so a `sidebar_component.css` next to a
+`component.html.erb` is not picked up.
 
 Sub-components nest the same way — each in its own directory inside its
 parent's, which keeps the rule identical at every depth. A component is found
@@ -99,9 +113,17 @@ needs no configuration.
 
 Resolution order, first match wins:
 
-1. `<stem>/<stem>.html.erb`
-2. `<package path>/<stem>.html.erb`, from the module's packages, longest first
-3. the same two with `.dt`
+1. `<stem>/component.html.erb`
+2. `<package path>/component.html.erb`, from the module's packages, longest
+   first — only paths whose last directory is `<stem>`
+3. `<stem>/<stem>.html.erb`
+4. `<package path>/<stem>.html.erb`, from the module's packages, longest first
+5. the same four with `.dt`
+
+The `<stem>` restriction in step 2 matters because a `component.*` name no
+longer identifies its class: a second class declared in
+`sidebar_component/component.d` fails to compile instead of rendering the
+sidebar's template.
 
 There is no explicit-path escape hatch: `mixin Template;` takes no argument.
 Every component exposes the path it resolved to as `Component.templatePath`,
@@ -189,10 +211,10 @@ The child's class must be visible to the parent's *module*, so import it in the
 `.d` file as usual — templates have no import mechanism of their own:
 
 ```d
-module components.sidebar_component.sidebar_component;
+module components.sidebar_component.component;
 
 import view_component;
-import components.sidebar_component.sidebar_link_component : SidebarLinkComponent;
+import components.sidebar_component.sidebar_link_component.component : SidebarLinkComponent;
 ```
 
 ### Inline child, or slot?
@@ -308,7 +330,7 @@ preBuildCommands "if command -v ruby >/dev/null 2>&1; then ./bin/validate-templa
 
 ```
 $ bin/validate-templates app/components
-app/components/card_component/card_component.html.erb:4:2
+app/components/card_component/component.html.erb:4:2
   MissingOpeningTagError: Found closing tag `</div>` at (4:2) without a matching
   opening tag in the same scope.
 ```
@@ -332,7 +354,7 @@ final class ButtonComponentPreview : ComponentPreview
     ViewComponent primary() { return new ButtonComponent("Save", "primary"); }
 }
 
-registerPreviews!(components.button_component)();
+registerPreviews!(components.button_component.component)();
 PreviewRegistry.render("ButtonComponentPreview", "primary");
 ```
 

@@ -1,10 +1,10 @@
-module components.sidebar_component.sidebar_component;
+module components.sidebar_component.component;
 
 import view_component;
 
-import components.sidebar_component.sidebar_footer_component.sidebar_footer_component : SidebarFooterComponent;
-import components.sidebar_component.sidebar_status_component.sidebar_status_component : SidebarStatusComponent;
-import components.sidebar_component.sidebar_section_component.sidebar_section_component : SidebarSectionComponent;
+import components.sidebar_component.sidebar_footer_component.component : SidebarFooterComponent;
+import components.sidebar_component.sidebar_status_component.component : SidebarStatusComponent;
+import components.sidebar_component.sidebar_section_component.component : SidebarSectionComponent;
 
 /**
  * Root of the sidebar tree, and the example that exercises every slot kind at

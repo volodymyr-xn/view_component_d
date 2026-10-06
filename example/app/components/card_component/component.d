@@ -1,8 +1,8 @@
-module components.card_component.card_component;
+module components.card_component.component;
 
 import view_component;
 
-import components.button_component.button_component : ButtonComponent;
+import components.button_component.component : ButtonComponent;
 
 /**
  * Sidecar-directory layout: the class, its template and its stylesheet all live

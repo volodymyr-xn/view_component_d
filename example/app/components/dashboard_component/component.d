@@ -1,8 +1,8 @@
-module components.dashboard_component.dashboard_component;
+module components.dashboard_component.component;
 
 import view_component;
 
-import components.card_component.card_component : CardComponent;
+import components.card_component.component : CardComponent;
 
 /// Composes other components; nesting renders straight into the shared sink.
 final class DashboardComponent : ViewComponent {

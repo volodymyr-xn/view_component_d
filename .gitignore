@@ -1,17 +1,35 @@
+# DUB
 .dub/
 dub.selections.json
+docs.json
+__dummy.html
+
+# Compiled objects and libraries
 *.o
 *.obj
-*.lst
 *.a
-view-component-tests
-view-component-tests-diet
-view_component_d-test-unittest-diet
-view_component_d
-example/view-component-example
-example/.dub/
-example/dub.selections.json
+*.lib
+*.so
+*.dylib
 
+# Executables (targetName in dub.sdl, plus `dub test` runners)
+/view-component-tests
+/view-component-tests-diet
+/view_component_d-test-*
+/example/view-component-example
+
+# Coverage and profiling (-cov, -profile, -profile=gc)
+*.lst
+trace.log
+trace.def
+profilegc.log
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+
+# Local working directories
 C_PLANS/
 C_ADVANCE/
 C_DOCS/
@@ -19,7 +37,3 @@ C_HTML/
 C_TEMP/
 C_RESEARCH/
 C_TODO/
-
-*.sqlite
-*.sqlite3
-*.db

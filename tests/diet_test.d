@@ -26,3 +26,21 @@ unittest {
     assertIncludes(markup, "badge--info");
     assertIncludes(markup, "New");
 }
+
+final class PillComponent : ViewComponent {
+    string label;
+
+    this(string label) {
+        this.label = label;
+    }
+
+    mixin Template;
+}
+
+unittest {
+    static assert(templatePathFor!"pill_component" == "pill_component/component.dt");
+}
+
+unittest {
+    assertRendersEqual(new PillComponent("Beta"), "<span class=\"pill\">Beta</span>");
+}

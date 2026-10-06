@@ -1,8 +1,8 @@
-module components.button_component.button_component;
+module components.button_component.component;
 
 import view_component;
 
-/// Flat layout: this file and `button_component.html.erb` sit side by side.
+/// Smallest layout: just this file and `component.html.erb`.
 final class ButtonComponent : ViewComponent {
     string label;
     string tone;

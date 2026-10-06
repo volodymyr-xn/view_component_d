@@ -1,8 +1,8 @@
-module components.sidebar_component.sidebar_section_component.sidebar_section_component;
+module components.sidebar_component.sidebar_section_component.component;
 
 import view_component;
 
-import components.sidebar_component.sidebar_link_component.sidebar_link_component : SidebarLinkComponent;
+import components.sidebar_component.sidebar_link_component.component : SidebarLinkComponent;
 
 /// A titled group of links. Suppresses itself entirely when it holds none.
 final class SidebarSectionComponent : ViewComponent {

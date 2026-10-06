@@ -35,31 +35,63 @@ private bool isLower(char character) pure nothrow @safe @nogc {
     return character >= 'a' && character <= 'z';
 }
 
+/// Basename shared by every file of a component in the `component.*` layout.
+private enum componentBasename = "component";
+
 /**
  * Every path a sidecar template may live at, in resolution order.
  *
  * A component always lives in a directory named after itself — there is no
- * layout where a template sits loose beside its class:
+ * layout where a template sits loose beside its class. Its files are named
+ * either `component.*` or after the directory, `component.*` taking
+ * precedence:
  *
+ *   app/components/button_component/component.html.erb
  *   app/components/button_component/button_component.html.erb
  *
  * Sub-components nest the same way, each in its own directory inside its
  * parent's, which the module's package path already mirrors:
  *
- *   app/components/sidebar_component/sidebar_link_component/sidebar_link_component.html.erb
+ *   app/components/sidebar_component/sidebar_link_component/component.html.erb
+ *
+ * A `component.*` file is only accepted from a directory named after the
+ * class, so a second class declared in `sidebar_component/component.d` cannot
+ * silently pick up the sidebar's template.
  */
 string[] templateCandidates(string stem, string modulePath) pure nothrow @safe {
-    string[] candidates = [stem ~ "/" ~ stem ~ ".html.erb"];
+    string[] directories = packageDirectories(modulePath);
+    string[] candidates;
 
-    foreach (directory; packageDirectories(modulePath))
-        candidates ~= directory ~ "/" ~ stem ~ ".html.erb";
-
-    candidates ~= stem ~ "/" ~ stem ~ ".dt";
-
-    foreach (directory; packageDirectories(modulePath))
-        candidates ~= directory ~ "/" ~ stem ~ ".dt";
+    foreach (extension; [".html.erb", ".dt"])
+        candidates ~= candidatesWithExtension(stem, directories, extension);
 
     return candidates;
+}
+
+private string[] candidatesWithExtension(string stem, const string[] directories,
+        string extension) pure nothrow @safe {
+    string[] candidates = [stem ~ "/" ~ componentBasename ~ extension];
+
+    foreach (directory; directories)
+        if (isNamedAfter(directory, stem))
+            candidates ~= directory ~ "/" ~ componentBasename ~ extension;
+
+    candidates ~= stem ~ "/" ~ stem ~ extension;
+
+    foreach (directory; directories)
+        candidates ~= directory ~ "/" ~ stem ~ extension;
+
+    return candidates;
+}
+
+/// Whether the last segment of `directory` is exactly `stem`.
+private bool isNamedAfter(string directory, string stem) pure nothrow @safe @nogc {
+    if (directory == stem)
+        return true;
+
+    return directory.length > stem.length
+        && directory[$ - stem.length .. $] == stem
+        && directory[$ - stem.length - 1] == '/';
 }
 
 /// Directory paths from a module's package path, most specific first.
@@ -116,8 +148,9 @@ template templatePathFor(string stem, string modulePath = null) {
 
 private string missingTemplateMessage(string stem, string[] candidatePaths) pure nothrow @safe {
     string message = "view_component: no sidecar template found for `" ~ stem ~ "`.\n"
-        ~ "  Every component lives in a directory named after itself; a template\n"
-        ~ "  loose beside its class is not a supported layout.\n"
+        ~ "  Every component lives in a directory named after itself, its files\n"
+        ~ "  named `component.*` or after the directory; a template loose beside\n"
+        ~ "  its class is not a supported layout.\n"
         ~ "  Looked for, relative to every string import path:\n";
 
     foreach (candidate; candidatePaths)

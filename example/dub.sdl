@@ -1,5 +1,5 @@
 name "view_component_example"
-description "Runnable example of view_component_d, showing both sidecar layouts."
+description "Runnable example of view_component_d."
 license "MIT"
 
 targetType "executable"
