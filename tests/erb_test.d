@@ -3,7 +3,34 @@ module tests.erb_test;
 import view_component.erb : compileErb;
 
 private string compile(string source) {
-    return compileErb(source, "fixture.html.erb", "sink");
+    return withoutReserve(compileErb(source, "fixture.html.erb", "sink"));
+}
+
+/**
+ * Drops the reserve prologue.
+ *
+ * It is asserted on its own below; repeating a byte count in every expectation
+ * would only obscure the tag handling each test is actually about.
+ */
+private string withoutReserve(string code) {
+    import std.algorithm : findSplitAfter, startsWith;
+
+    if (!code.startsWith("sink.reserve("))
+        return code;
+
+    return code.findSplitAfter(");\n")[1];
+}
+
+unittest {
+    // The literal bytes are counted at compile time and claimed in one call.
+    immutable reserved = compileErb("<p>hi</p>", "fixture.html.erb", "sink");
+    assert(reserved == "sink.reserve(sink.length + 9);\nsink.put(\"<p>hi</p>\");\n",
+        reserved);
+}
+
+unittest {
+    // A template that is nothing but an expression has no literals to claim.
+    assert(compileErb("<%= label %>", "fixture.html.erb", "sink") == "__vcEmit( label );\n");
 }
 
 unittest {

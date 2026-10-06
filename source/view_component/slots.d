@@ -75,8 +75,8 @@ private string rendersOneCode(string slotName) pure nothrow @safe {
     return "private SlotType " ~ field ~ ";"
         ~ "final typeof(this) with" ~ suffix ~ "(SlotType component)"
         ~ "{ " ~ field ~ " = component; return this; }"
-        ~ "SlotType " ~ slotName ~ "() { return " ~ field ~ "; }"
-        ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ " !is null; }";
+        ~ "final SlotType " ~ slotName ~ "() { return " ~ field ~ "; }"
+        ~ "final bool has" ~ suffix ~ "() const { return " ~ field ~ " !is null; }";
 }
 
 private string rendersManyCode(string slotName) pure nothrow @safe {
@@ -86,8 +86,8 @@ private string rendersManyCode(string slotName) pure nothrow @safe {
     return "private SlotType[] " ~ field ~ ";"
         ~ "final typeof(this) with" ~ suffix ~ "(SlotType[] components...)"
         ~ "{ " ~ field ~ " ~= components; return this; }"
-        ~ "SlotType[] " ~ slotName ~ "() { return " ~ field ~ "; }"
-        ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ ".length != 0; }";
+        ~ "final SlotType[] " ~ slotName ~ "() { return " ~ field ~ "; }"
+        ~ "final bool has" ~ suffix ~ "() const { return " ~ field ~ ".length != 0; }";
 }
 
 private string rendersOneContentCode(string slotName) pure nothrow @safe {
@@ -101,8 +101,8 @@ private string rendersOneContentCode(string slotName) pure nothrow @safe {
         ~ "{ " ~ field ~ " = Support.Content.ofMarkup(markup); return this; }"
         ~ "final typeof(this) with" ~ suffix ~ "(void delegate(ref Support.Sink) builder)"
         ~ "{ " ~ field ~ " = Support.Content.ofBuilder(builder); return this; }"
-        ~ "ref Support.Content " ~ slotName ~ "() return { return " ~ field ~ "; }"
-        ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ ".isEmpty == false; }";
+        ~ "final ref Support.Content " ~ slotName ~ "() return { return " ~ field ~ "; }"
+        ~ "final bool has" ~ suffix ~ "() const { return " ~ field ~ ".isEmpty == false; }";
 }
 
 private string rendersManyContentCode(string slotName) pure nothrow @safe {
@@ -116,8 +116,8 @@ private string rendersManyContentCode(string slotName) pure nothrow @safe {
         ~ "{ " ~ field ~ " ~= Support.Content.ofMarkup(markup); return this; }"
         ~ "final typeof(this) with" ~ suffix ~ "(void delegate(ref Support.Sink) builder)"
         ~ "{ " ~ field ~ " ~= Support.Content.ofBuilder(builder); return this; }"
-        ~ "Support.Content[] " ~ slotName ~ "() { return " ~ field ~ "; }"
-        ~ "bool has" ~ suffix ~ "() const { return " ~ field ~ ".length != 0; }";
+        ~ "final Support.Content[] " ~ slotName ~ "() { return " ~ field ~ "; }"
+        ~ "final bool has" ~ suffix ~ "() const { return " ~ field ~ ".length != 0; }";
 }
 
 /// Builds the `withX` / `hasX` suffix from a slot name.

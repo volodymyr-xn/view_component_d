@@ -25,11 +25,13 @@ string compileErb(string source, string templateName, string sinkIdent) {
     string code;
     string literal;
     size_t cursor = 0;
+    size_t literalBytes = 0;
 
     void flushLiteral() {
         if (literal.length == 0)
             return;
 
+        literalBytes += literal.length;
         code ~= sinkIdent ~ `.put("` ~ escapeDStringLiteral(literal) ~ "\");\n";
         literal = null;
     }
@@ -129,6 +131,17 @@ string compileErb(string source, string templateName, string sinkIdent) {
     }
 
     flushLiteral();
+
+    // Every literal chunk's length is known here, so the markup this template
+    // contributes can be claimed in one call rather than discovered by the
+    // sink doubling its way up from 512 bytes. Interpolated values are not
+    // counted; the reserve is a floor, not a prediction.
+    if (literalBytes != 0) {
+        import std.conv : to;
+
+        code = sinkIdent ~ ".reserve(" ~ sinkIdent ~ ".length + "
+            ~ literalBytes.to!string ~ ");\n" ~ code;
+    }
 
     return code;
 }

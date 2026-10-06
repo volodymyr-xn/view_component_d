@@ -30,27 +30,72 @@ if (!is(Value : const(char)[])) {
  * walks the input twice and leaves a throwaway array behind for every value
  * that needs escaping. Writing runs into the caller's buffer costs one pass and
  * nothing on the heap, which is what `emit` uses for every `<%= %>`.
+ *
+ * The scan reads eight bytes at a time and skips the whole word when none of
+ * them needs escaping, which is nearly every word on a page. A word that does
+ * contain one is re-walked a byte at a time: locating *which* byte through bit
+ * arithmetic costs more than the rare second pass it would save.
  */
 void escapeHtmlInto(Sink)(ref Sink sink, const(char)[] input) {
     size_t runStart = 0;
+    size_t index = 0;
 
-    foreach (index, character; input) {
-        immutable replacement = replacementFor(character);
+    void escapeAt(size_t position) {
+        immutable replacement = replacementFor(input[position]);
 
         if (replacement.length == 0)
-            continue;
+            return;
 
-        if (index > runStart)
-            sink.put(input[runStart .. index]);
+        if (position > runStart)
+            sink.put(input[runStart .. position]);
 
         sink.put(replacement);
-        runStart = index + 1;
+        runStart = position + 1;
     }
+
+    while (index + ulong.sizeof <= input.length) {
+        if (escapableBytes(loadWord(input, index)) != 0)
+            foreach (offset; 0 .. ulong.sizeof)
+                escapeAt(index + offset);
+
+        index += ulong.sizeof;
+    }
+
+    for (; index < input.length; index++)
+        escapeAt(index);
 
     if (runStart == 0)
         sink.put(input);
     else if (runStart < input.length)
         sink.put(input[runStart .. $]);
+}
+
+private enum ulong onePerByte = 0x0101_0101_0101_0101UL;
+private enum ulong highBitPerByte = 0x8080_8080_8080_8080UL;
+
+/// Reads eight bytes from `index`. Byte order does not matter: the tests below
+/// only ask *whether* a word holds a byte, never where.
+private ulong loadWord(const(char)[] input, size_t index) @trusted pure nothrow @nogc {
+    import core.stdc.string : memcpy;
+
+    ulong word = void;
+    memcpy(&word, input.ptr + index, ulong.sizeof);
+
+    return word;
+}
+
+/// Sets the high bit of every zero byte, and only those.
+private ulong zeroBytes(ulong word) pure nothrow @safe @nogc {
+    return (word - onePerByte) & ~word & highBitPerByte;
+}
+
+/// Non-zero when `word` holds any byte that HTML escaping would replace.
+private ulong escapableBytes(ulong word) pure nothrow @safe @nogc {
+    return zeroBytes(word ^ (onePerByte * '&'))
+        | zeroBytes(word ^ (onePerByte * '<'))
+        | zeroBytes(word ^ (onePerByte * '>'))
+        | zeroBytes(word ^ (onePerByte * '"'))
+        | zeroBytes(word ^ (onePerByte * '\''));
 }
 
 /**

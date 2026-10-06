@@ -3,6 +3,21 @@ module view_component.sink;
 import core.memory : GC;
 import core.stdc.string : memcpy;
 
+/// Chunks at least this long are recorded as they're put (`Sink.chunks`).
+enum size_t largeChunkLength = 1024;
+
+/**
+ * A chunk put whole into a `Sink`: the slice it came from and where it
+ * landed. A cached fragment is put as the slice the cache holds, so a
+ * caller that knows the fragment finds its place in the output without
+ * searching the output for its bytes.
+ */
+struct LargeChunk {
+    size_t offset;
+    const(char)* ptr;
+    size_t length;
+}
+
 /**
  * The output buffer every component renders into.
  *
@@ -22,6 +37,7 @@ struct Sink {
     private char* block;
     private size_t capacity;
     private size_t used;
+    private LargeChunk[] largeChunks;
 
     /// Grows the buffer so `wanted` bytes can be written without reallocating.
     void reserve(size_t wanted) {
@@ -33,6 +49,9 @@ struct Sink {
     void put(const(char)[] chunk) {
         if (chunk.length == 0)
             return;
+
+        if (chunk.length >= largeChunkLength)
+            largeChunks ~= LargeChunk(used, chunk.ptr, chunk.length);
 
         if (used + chunk.length > capacity)
             grow(used + chunk.length);
@@ -70,9 +89,16 @@ struct Sink {
         return used;
     }
 
+    /// Where each chunk of at least `largeChunkLength` bytes went, in the
+    /// order they were put.
+    const(LargeChunk)[] chunks() const return {
+        return largeChunks;
+    }
+
     /// Drops the contents, keeping the buffer for the next render.
     void clear() {
         used = 0;
+        largeChunks.length = 0;
     }
 
     private void grow(size_t required) {

@@ -1,5 +1,7 @@
 module tests.sink_test;
 
+import std.array : replicate;
+
 import view_component.escape : escapeHtml, escapeHtmlInto;
 import view_component.sink : Sink;
 
@@ -80,4 +82,34 @@ unittest {
 
     foreach (sample; samples)
         assert(escaped(sample) == escapeHtml(sample));
+}
+
+/**
+ * The eight-byte scan has to agree with the allocating form wherever an
+ * escapable byte lands — first of a word, last of one, in the tail past the
+ * final whole word, or nowhere at all.
+ */
+unittest {
+    foreach (length; 0 .. 40) {
+        immutable plain = new char[length];
+        (cast(char[]) plain)[] = 'x';
+
+        assert(escaped(plain) == escapeHtml(plain), plain);
+
+        foreach (position; 0 .. length) {
+            foreach (escapable; "&<>\"'") {
+                auto sample = plain.dup;
+                sample[position] = escapable;
+
+                assert(escaped(sample) == escapeHtml(sample), sample.idup);
+            }
+        }
+    }
+}
+
+/// Two escapable bytes in the same word, and one in each of two words.
+unittest {
+    assert(escaped("ab&cd<ef") == "ab&amp;cd&lt;ef");
+    assert(escaped("abcdefg&hijklmno<p") == "abcdefg&amp;hijklmno&lt;p");
+    assert(escaped("&&&&&&&&&&&&&&&&") == "&amp;".replicate(16));
 }

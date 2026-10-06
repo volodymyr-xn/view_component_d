@@ -1,7 +1,7 @@
 module view_component.render;
 
 import std.range : ElementType;
-import std.traits : isArray, isSomeChar;
+import std.traits : isArray, isIntegral, isSigned, isSomeChar;
 
 import view_component.base : Content, Sink, ViewComponent;
 import view_component.escape : SafeString, escapeHtmlInto;
@@ -45,9 +45,48 @@ void emit(Value)(ref Sink sink, auto ref Value value) {
 
         escapeHtmlInto(sink, buffer[0 .. used]);
     }
+    else static if (isIntegral!Value && !is(Value == enum)) {
+        putDecimalInto(sink, value);
+    }
     else {
         import std.conv : to;
 
         escapeHtmlInto(sink, value.to!string);
     }
+}
+
+/**
+ * Writes an integer's decimal form into the sink.
+ *
+ * The generic branch above reaches `to!string`, which allocates a GC string per
+ * value and then walks it looking for `&<>"'` that a digit can never be. Digits
+ * are built backwards into a stack buffer instead and handed over in one `put`.
+ * Twenty bytes covers both extremes: `18446744073709551615` and
+ * `-9223372036854775808`.
+ */
+private void putDecimalInto(Value)(ref Sink sink, Value value) {
+    char[20] digits = void;
+    size_t cursor = digits.length;
+
+    static if (isSigned!Value) {
+        immutable negative = value < 0;
+        // Negating in `ulong` keeps `Value.min` in range, where negating in the
+        // signed type would overflow.
+        ulong magnitude = negative ? -cast(ulong) value : cast(ulong) value;
+    }
+    else {
+        enum negative = false;
+        ulong magnitude = value;
+    }
+
+    do {
+        digits[--cursor] = cast(char)('0' + magnitude % 10);
+        magnitude /= 10;
+    }
+    while (magnitude != 0);
+
+    if (negative)
+        digits[--cursor] = '-';
+
+    sink.put(digits[cursor .. $]);
 }
